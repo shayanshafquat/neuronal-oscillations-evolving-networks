@@ -60,6 +60,8 @@ L = rho * (D - w_kj)
 
 # Define the differential equation model
 def dcdt(c_k, q_k, w_kj, alpha):
+    D = np.diag(w_kj.sum(axis=1))  
+    L = rho * (D - w_kj) 
     return -L.dot(c_k) + alpha * c_k * (1 - c_k)
 
 def dqdt(c_k, q_k, beta):
@@ -118,7 +120,7 @@ W_unrealistic = np.array([np.linalg.norm(w) / np.linalg.norm(w_kj) for w in w_kj
 plt.figure(figsize=(12, 6))
 plt.plot(t, C_T_no_damage, 'black', linestyle="--",linewidth=3, label='Average concentration in the absence of damage')
 plt.plot(t, C_T_severe, 'b-', label='C: Average concentration in the case of severe damage')
-plt.plot(t, C_T_unrealistic, 'g--',linewidth=3, label='C: Average concentration in the case of unrealistic damage')
+plt.plot(t, C_T_unrealistic, 'b--', label='C: Average concentration in the case of unrealistic damage')
 plt.plot(t, Q_severe, color="purple", label='Q: Node damage in the case of severe damage')
 plt.plot(t, Q_unrealistic, color="purple", linestyle="--", label='Q: Node damage in the case of unrealistic damage')
 plt.plot(t, W_severe, 'r-', label='W: Edge weight in the case of severe damage')
