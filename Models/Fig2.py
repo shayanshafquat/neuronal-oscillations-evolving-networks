@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
@@ -52,14 +53,12 @@ for _, row in data.iterrows():
     w_kj[idx2, idx1] = weight
 
 # Check initialization status
-(c_k, q_k, w_kj[:5, :5])  # Display only a small part of w_kj to verify initialization status
+# (c_k, q_k, w_kj[:5, :5])  # Display only a small part of w_kj to verify initialization status
 
-# Define the graph Laplacian matrix L
-D = np.diag(w_kj.sum(axis=1))  
-L = rho * (D - w_kj) 
 
 # Define the differential equation model
 def dcdt(c_k, q_k, w_kj, alpha):
+    # Define the graph Laplacian matrix L
     D = np.diag(w_kj.sum(axis=1))  
     L = rho * (D - w_kj) 
     return -L.dot(c_k) + alpha * c_k * (1 - c_k)
