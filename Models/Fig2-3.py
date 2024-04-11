@@ -101,6 +101,9 @@ L = rho * (D - w_kj)
 
 # Define the differential equation model
 def dcdt(c_k, q_k, w_kj, alpha):
+    # Define the graph Laplacian matrix L
+    D = np.diag(w_kj.sum(axis=1))  
+    L = rho * (D - w_kj) 
     return -L.dot(c_k) + alpha * c_k * (1 - c_k)
 
 def dqdt(c_k, q_k, beta):
