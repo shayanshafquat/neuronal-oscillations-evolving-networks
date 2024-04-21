@@ -12,56 +12,7 @@ current_dir = os.path.dirname(__file__)
 node_data = pd.read_csv(os.path.join(current_dir, 'data', 'Categorized_Brain_Nodes.csv'))
 # Edge weight file
 weight_data = pd.read_csv(os.path.join(current_dir, 'data', 'weights.csv'), header = None)
-'''
-####################################################
-#Extract weights from heatmap
-path_to_fig = os.path.join(current_dir, 'plots', 'heatmap.jpg')
-path_to_fig_1 = os.path.join(current_dir, 'plots', 'heatmap_1.jpg')
 
-image = cv2.imread(path_to_fig,1)
-imimage = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-plt.imshow(image)
-plt.show()
-
-gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-# Use a threshold to find the heatmap
-# This threshold would have to be adjusted to the specific color distribution of the heatmap
-_, binary_image = cv2.threshold(gray_image, 200, 255, cv2.THRESH_BINARY_INV)
-
-contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-largest_contour = max(contours, key=cv2.contourArea)
-x, y, w, h = cv2.boundingRect(largest_contour)
-
-# Calculate the cell size based on the heatmap size and the number of nodes (83 x 83)
-cell_size_x = w // 83
-cell_size_y = h // 83
-
-# Initialize the weight matrix
-weight_matrix = np.zeros((83, 83))
-
-legend_start = 0
-legend_end = 9.8
-
-# Extract cell intensities and normalize them
-for row in range(83):
-    for col in range(83):
-        cell_x = x + col * cell_size_x
-        cell_y = y + row * cell_size_y
-        cell = gray_image[cell_y:cell_y + cell_size_y, cell_x:cell_x + cell_size_x]
-        cell_intensity = np.mean(cell)
-        weight_matrix[row, col] = cell_intensity
-
-# Normalize the weight matrix to the range between legend_start and legend_end
-min_intensity = weight_matrix.min()
-max_intensity = weight_matrix.max()
-
-# Apply normalization
-weight_matrix = legend_start + ((weight_matrix - min_intensity) * (legend_end - legend_start)) / (max_intensity - min_intensity)
-w_kj = weight_matrix
-
-#########################################
-'''
 # Categorise nodes into super_regions
 node_data = node_data.sort_values(by = ['super_region'])
 super_regions = list(dict.fromkeys(node_data['super_region']))
@@ -102,7 +53,7 @@ p_k = np.full(num_nodes, 2)
 pp_k = np.zeros(num_nodes)
 c_k = np.zeros(num_nodes)
 q_k = np.zeros(num_nodes)
-#w_kj = weight_data.to_numpy()
+w_kj = weight_data.to_numpy()
 #Get indexes for entorhinal nodes
 entorhinal_nodes = node_data[node_data['Region'] == 'entorhinal']
 # Set the initial toxic protein concentration for the entorhinal nodes
