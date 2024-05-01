@@ -1,14 +1,11 @@
 import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.lines import Line2D
 import pandas as pd
 import os
 import cv2
 pd.options.mode.chained_assignment = None
-plt.rcParams.update({'font.size': 16})
+
 # Extract and organise data from .csv files
 current_dir = os.path.dirname(__file__)
 # Node region allocation file
@@ -17,12 +14,11 @@ node_data = pd.read_csv(os.path.join(current_dir, 'data', 'Categorized_Brain_Nod
 weight_data = pd.read_csv(os.path.join(current_dir, 'data', 'weights.csv'), header = None)
 
 # Categorise nodes into super_regions
-node_data = node_data.sort_values(by = ['Super_Region'])
-super_regions = list(dict.fromkeys(node_data['Super_Region']))
+node_data = node_data.sort_values(by = ['super_region'])
+super_regions = list(dict.fromkeys(node_data['super_region']))
 categorized_regions = [0,0,0,0,0,0,0]
 for idx, i in enumerate(super_regions):
-    categorized_regions[idx] = node_data[node_data['Super_Region'] == i]
-print(categorized_regions)
+    categorized_regions[idx] = node_data[node_data['super_region'] == i]
 # Calculate cumualitve sum of number of nodes in each region
 # For later use in indexing
 region_counts = []
@@ -36,12 +32,12 @@ num_nodes = len(node_data.index)
 model_choice = input("Select model: fk (Fisher-Kolmogorov), (h) Heterodimer, (s) Smoluchowski")
 beta_no_damage = 0
 gamma_no_damage = 0
-beta_severe = 1/4
+beta_severe = 1 / 4   
 gamma_severe = 1 / 8 
 beta_unrealistic = 4 
 gamma_unrealistic = 2
 if model_choice.lower() == "fk":
-    alpha = 3/4 # 3/4 per year
+    alpha = 0.75 # 3/4 per year
 elif model_choice.lower() == "h":
     k0 = 1
     k1 = 0.5
@@ -49,7 +45,7 @@ elif model_choice.lower() == "h":
     k12 = 0.5
     alpha = k12*(k0/k1)-k2
   
-rho = 1/100  # mm/yr, Laplacian rate constant
+rho = 1 / 100  # mm/yr, Laplacian rate constant
 
 # Initialize c_k (toxic protein concentration), q_k (node damage), and w_kj (edge weight)
 # For Heterodimer model, no c_k, p_k = healthy protein concentration pp_k = unhealthy protein concentration
@@ -59,16 +55,16 @@ c_k = np.zeros(num_nodes)
 q_k = np.zeros(num_nodes)
 w_kj = weight_data.to_numpy()
 #Get indexes for entorhinal nodes
-seed_nodes = node_data[node_data['Region'] == 'entorhinal']
+entorhinal_nodes = node_data[node_data['Region'] == 'entorhinal']
 # Set the initial toxic protein concentration for the entorhinal nodes
 # c_k = 0.025 for fk model and pp_k = 0.5 for h model
 if model_choice.lower() == "fk":
     seed_protein_concentration = 0.025
-    for i in seed_nodes.index:
+    for i in entorhinal_nodes.index:
         c_k[i] = seed_protein_concentration
 elif model_choice.lower() == "h":
     seed_protein_concentration = 0.5
-    for i in seed_nodes.index:
+    for i in entorhinal_nodes.index:
         pp_k[i] = seed_protein_concentration
 
 # Define the differential equation model
@@ -151,7 +147,7 @@ if model_choice.lower() == 'fk':
 
     C_T_no_damage = c_k_no_damage.mean(axis=1)
 elif model_choice.lower() == 'h':
-    pp_k_no_damage = sol_no_damage[:, num_nodes:num_nodes*2]
+    pp_k_no_damage = sol_no_damage[:, num_nodes*2:num_nodes*3]
 
     PP_T_no_damage = pp_k_no_damage.mean(axis=1)
 
@@ -202,26 +198,24 @@ elif model_choice.lower() == 'h':
 
 # Regional data
 # Change Model data to observe regional damage in different cases e.g. Severe and Unrealistic
+model_data = sol_severe
 # Dividing up q_k into respective regions
 if model_choice.lower() == 'fk':
-    model_data = sol_severe[:,num_nodes:num_nodes*2]
-    basal_ganglia_q_k = model_data[:, node_data[node_data['Super_Region'] == 'basal_ganglia'].index]
-    brain_stem_q_k = model_data[:, node_data[node_data['Super_Region'] == 'brain_stem'].index]
-    frontal_q_k = model_data[:, node_data[node_data['Super_Region'] == 'frontal'].index]
-    limbic_q_k = model_data[:, node_data[node_data['Super_Region'] == 'limbic'].index]
-    occipital_q_k = model_data[:, node_data[node_data['Super_Region'] == 'occipital'].index]
-    parietal_q_k = model_data[:, node_data[node_data['Super_Region'] == 'parietal'].index]
-    temporal_q_k = model_data[:, node_data[node_data['Super_Region'] == 'temporal'].index]
+    basal_ganglia_q_k = model_data[:, num_nodes:num_nodes+region_counts[0]]
+    brain_stem_q_k = model_data[:, num_nodes+region_counts[0]:num_nodes+region_counts[1]]
+    frontal_q_k = model_data[:, num_nodes+region_counts[1]:num_nodes+region_counts[2]]
+    limbic_q_k = model_data[:, num_nodes+region_counts[2]:num_nodes+region_counts[3]]
+    occipital_q_k = model_data[:, num_nodes+region_counts[3]:num_nodes+region_counts[4]]
+    parietal_q_k = model_data[:, num_nodes+region_counts[4]:num_nodes+region_counts[5]]
+    temporal_q_k = model_data[:, num_nodes+region_counts[5]:num_nodes*2]
 elif model_choice.lower() == 'h':
-    model_data = sol_severe[:,num_nodes*2:num_nodes*3]
-    basal_ganglia_q_k = model_data[:, node_data[node_data['Super_Region'] == 'basal_ganglia'].index]
-    brain_stem_q_k = model_data[:, node_data[node_data['Super_Region'] == 'brain_stem'].index]
-    frontal_q_k = model_data[:, node_data[node_data['Super_Region'] == 'frontal'].index]
-    limbic_q_k = model_data[:, node_data[node_data['Super_Region'] == 'limbic'].index]
-    occipital_q_k = model_data[:, node_data[node_data['Super_Region'] == 'occipital'].index]
-    parietal_q_k = model_data[:, node_data[node_data['Super_Region'] == 'parietal'].index]
-    temporal_q_k = model_data[:, node_data[node_data['Super_Region'] == 'temporal'].index]
-basal_ganglia_Q = basal_ganglia_q_k.mean(axis=1)
+    basal_ganglia_q_k = model_data[:, num_nodes*2:num_nodes*2+region_counts[0]]
+    brain_stem_q_k = model_data[:, num_nodes*2+region_counts[0]:num_nodes*2+region_counts[1]]
+    frontal_q_k = model_data[:, num_nodes*2+region_counts[1]:num_nodes*2+region_counts[2]]
+    limbic_q_k = model_data[:, num_nodes*2+region_counts[2]:num_nodes*2+region_counts[3]]
+    occipital_q_k = model_data[:, num_nodes*2+region_counts[3]:num_nodes*2+region_counts[4]]
+    parietal_q_k = model_data[:, num_nodes*2+region_counts[4]:num_nodes*2+region_counts[5]]
+    temporal_q_k = model_data[:, num_nodes*2+region_counts[5]:num_nodes*3]
 basal_ganglia_Q = basal_ganglia_q_k.mean(axis=1)
 brain_stem_Q = brain_stem_q_k.mean(axis=1)
 frontal_Q = frontal_q_k.mean(axis=1)
@@ -231,7 +225,7 @@ parietal_Q = parietal_q_k.mean(axis=1)
 temporal_Q = temporal_q_k.mean(axis=1)
 
 # Plot the results
-'''
+
 #Fig 2
 plt.figure(figsize=(12, 6))
 if model_choice.lower() == 'fk':
@@ -251,10 +245,9 @@ plt.xlabel('Time (yr)')
 plt.ylabel('Concentration/Damage/Weight')
 plt.legend()
 plt.tight_layout()
-'''
+
 #Fig 3
 plt.figure(figsize=(10, 6))
-plt.title("Regional Damage accumulation")
 plt.plot(t, frontal_Q, color="red", label='frontal')
 plt.plot(t, parietal_Q, color="orange", label='parietal')
 plt.plot(t, occipital_Q, color="greenyellow", label='occipital')
@@ -266,70 +259,6 @@ plt.xlabel('Time (yr)')
 plt.ylabel('Damage')
 plt.legend()
 plt.tight_layout()
-#Fig 4
 
-seed_node_testing = []
-stepsize = 1
-for i in range(0, 10, stepsize):
-    seed_protein_concentration = i*0.1+0.1
-    for j in seed_nodes.index:
-        c_k[j] = seed_protein_concentration
-    y0 = np.concatenate((c_k, q_k, w_kj.flatten()))
-    sol_severe = odeint(model, y0, t, args=(beta_severe, gamma_severe))
-    q_k_severe = sol_severe[:, num_nodes:2*num_nodes]
-    regional_results = []
-    regional_results.append(q_k_severe[:, node_data[node_data['Super_Region'] == 'basal_ganglia'].index])
-    regional_results.append(q_k_severe[:, node_data[node_data['Super_Region'] == 'brain_stem'].index])
-    regional_results.append(q_k_severe[:, node_data[node_data['Super_Region'] == 'frontal'].index])
-    regional_results.append(q_k_severe[:, node_data[node_data['Super_Region'] == 'limbic'].index])
-    regional_results.append(q_k_severe[:, node_data[node_data['Super_Region'] == 'occipital'].index])
-    regional_results.append(q_k_severe[:, node_data[node_data['Super_Region'] == 'parietal'].index])
-    regional_results.append(q_k_severe[:, node_data[node_data['Super_Region'] == 'temporal'].index])
-    for idx, k in enumerate(regional_results):
-        regional_results[idx] = k.mean(axis=1)
-    seed_node_testing.append(regional_results)
-seed_node_testing = np.transpose(seed_node_testing, (1,0,2))
-plt.figure(figsize=(10, 6))
-plt.title("Average Node Damage Over Time Based On Seed Protein Concentration")
-colours = ["blue", "black", "red", "dodgerblue", "greenyellow", "orange", "deepskyblue"]
-print(np.shape(seed_node_testing))
-for idx, i in enumerate(seed_node_testing):
-    for idx2, j in enumerate(i):
-        plt.plot(t, j, color=colours[idx], alpha = ((idx2+1)*0.1*stepsize))
-plt.xlabel('Time (yr)')
-plt.ylabel('Damage')
-frontalh = Line2D([0], [0], label='frontal', color='red')
-parietalh = Line2D([0], [0], label='parietal', color='orange')
-occipitalh = Line2D([0], [0], label='occipital', color='greenyellow')
-temporalh = Line2D([0], [0], label='temporal', color='deepskyblue')
-limbich = Line2D([0], [0], label='limbic', color='dodgerblue')
-basal_gangliah = Line2D([0], [0], label='basal ganglia', color='blue')
-brain_stemh = Line2D([0], [0], label='brain stem', color='black')
-handles = [frontalh, parietalh, occipitalh, temporalh, limbich, basal_gangliah, brain_stemh]
-plt.legend(handles = handles)
-plt.tight_layout()
-
-seed_node_testing = []
-stepsize = 1
-for i in range(0, 10, stepsize):
-    seed_protein_concentration = i*0.1+0.1
-    for j in seed_nodes.index:
-        c_k[j] = seed_protein_concentration
-    y0 = np.concatenate((c_k, q_k, w_kj.flatten()))
-    sol_severe = odeint(model, y0, t, args=(beta_severe, gamma_severe))
-    q_k_severe = sol_severe[:, num_nodes:2*num_nodes]
-    seed_node_testing.append(q_k_severe.mean(axis=1))
-plt.figure(figsize=(10, 6))
-plt.title("Global Node Damage Based On Seed Protein Concentration")
-for idx, i in enumerate(seed_node_testing):
-    plt.plot(t, i, color=mpl.cm.winter(idx*0.1*stepsize+0.1))
-plt.xlabel('Time (yr)')
-plt.ylabel('Damage')
-divider = make_axes_locatable(plt.gca())
-ax_cb = divider.new_horizontal(size="5%", pad=0.05)    
-cb1 = mpl.colorbar.ColorbarBase(ax_cb, cmap=mpl.cm.winter, orientation='vertical')
-plt.gcf().add_axes(ax_cb)
-plt.tight_layout()
 plt.show()
-
 
