@@ -14,4 +14,4 @@ Our extended model provides insights into:
 - The relationship between structural network changes and neural dynamics
 - The role of hemispheric differences and homeostasis in cognitive decline
 
-For detailed results, please refer to the [full report](link-to-your-report.pdf).
+For detailed results, please refer to the [full report](PBM_2.pdf).
